@@ -1,0 +1,6 @@
+[submodule "apps/seo-agent"]
+	path = apps/seo-agent
+	url = https://github.com/EricHong123/seo-ai-agent.git
+[submodule "apps/social-upload"]
+	path = apps/social-upload
+	url = https://github.com/EricHong123/social-auto-upload.git

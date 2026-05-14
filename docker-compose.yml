@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  seo-agent:
+    build:
+      context: ./apps/seo-agent
+    container_name: seo-agent
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./apps/seo-agent/.env
+    volumes:
+      - seo_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  social-upload:
+    build:
+      context: ./apps/social-upload
+      dockerfile: Dockerfile
+    container_name: social-upload
+    ports:
+      - "8001:8001"
+    volumes:
+      - sau_data:/app/data
+      - ./apps/social-upload/cookies:/app/cookies
+    restart: unless-stopped
+    profiles:
+      - full
+
+  dashboard:
+    build:
+      context: ./apps/dashboard
+    container_name: dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - seo-agent
+    restart: unless-stopped
+
+volumes:
+  seo_data:
+  sau_data:

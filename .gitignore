@@ -1,0 +1,22 @@
+# Apps (managed by submodules)
+# apps/seo-agent/
+# apps/social-upload/
+
+# Data
+data/
+*.db
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Environment
+.env
