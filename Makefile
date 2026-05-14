@@ -6,10 +6,18 @@ start:
 	@sleep 2
 	PYTHONPATH=apps/seo-agent:apps/dashboard python3 apps/dashboard/server.py &
 	@sleep 1
+	cd apps/social-upload && python3 web_server.py &
+	@sleep 1
 	@echo ""
 	@echo "Dashboard:    http://127.0.0.1:3000"
 	@echo "SEO Agent:    http://127.0.0.1:8000"
-	@echo "Docs:         http://127.0.0.1:3000/docs"
+	@echo "Social Upload: http://127.0.0.1:8001"
+
+stop:
+	pkill -f "dashboard/server.py" || true
+	pkill -f "web_server.py" || true
+	pkill -f "uvicorn interfaces.api.main" || true
+	@echo "ContentEngine stopped."
 
 start-full:
 	@echo "Starting ContentEngine (full)..."
@@ -17,12 +25,6 @@ start-full:
 	@echo "Dashboard:    http://127.0.0.1:3000"
 	@echo "SEO Agent:    http://127.0.0.1:8000"
 	@echo "Social Upload: http://127.0.0.1:8001"
-
-stop:
-	pkill -f "dashboard/server.py" || true
-	pkill -f "uvicorn interfaces.api.main" || true
-	docker compose down 2>/dev/null || true
-	@echo "ContentEngine stopped."
 
 reset:
 	rm -rf apps/seo-agent/data/*
