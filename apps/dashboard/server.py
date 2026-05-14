@@ -21,6 +21,10 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(DASHBOARD_DIR), **kwargs)
 
     def do_GET(self):
+        # Publish workflow
+        if self.path.startswith("/publish/"):
+            self._handle_publish("GET")
+            return
         # Proxy API calls to seo-agent
         if self.path.startswith("/api/") or self.path in ("/health", "/ready", "/projects", "/articles", "/kb", "/analytics"):
             self._proxy("GET")
@@ -32,6 +36,10 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        # Publish workflow endpoints
+        if self.path.startswith("/publish/"):
+            self._handle_publish("POST")
+            return
         if self.path.startswith("/api/") or self.path.startswith("/kb/") or self.path.startswith("/settings") or self.path.startswith("/projects") or self.path.startswith("/articles"):
             self._proxy("POST")
             return
@@ -85,6 +93,57 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(e.read())
         except urllib.error.URLError as e:
             self.send_error(502, f"SEO Agent unreachable: {e.reason}")
+
+    def _handle_publish(self, method: str):
+        """Handle /publish/* endpoints for QR login and one-click publish."""
+        from publish_handler import login_platform, publish_content, list_accounts
+
+        path = self.path
+
+        if path == "/publish/accounts" and method == "GET":
+            accounts = list_accounts()
+            self._json_response(200, {"accounts": accounts})
+
+        elif path == "/publish/login" and method == "POST":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length > 0 else {}
+            platform = body.get("platform", "douyin")
+            account = body.get("account", "default")
+            result = login_platform(platform, account, headless=False)
+            self._json_response(200, result)
+
+        elif path == "/publish/send" and method == "POST":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(content_length)) if content_length > 0 else {}
+            platform = body.get("platform", "douyin")
+            account = body.get("account", "default")
+            content_url = body.get("content_url", f"{SEO_AGENT}/api/content/export/latest?format=sau")
+            images = body.get("images", [])
+            result = publish_content(platform, account, content_url, image_files=images)
+            self._json_response(200, result)
+
+        elif path.startswith("/publish/qr/") and method == "GET":
+            # Serve QR code image
+            filename = Path(path).name
+            qr_path = Path("cookies") / filename
+            from publish_handler import SAU_DIR
+            qr_path = SAU_DIR / "cookies" / filename.split("_")[0] / filename
+            if qr_path.exists():
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.end_headers()
+                self.wfile.write(qr_path.read_bytes())
+            else:
+                self.send_error(404, "QR code not found")
+
+        else:
+            self.send_error(404, f"Unknown publish endpoint: {path}")
+
+    def _json_response(self, code: int, data: dict):
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(data, ensure_ascii=False).encode())
 
     def log_message(self, format, *args):
         # Quieter logging

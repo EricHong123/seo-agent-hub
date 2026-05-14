@@ -4,7 +4,7 @@ start:
 	@echo "Starting ContentEngine..."
 	PYTHONPATH=apps/seo-agent python3 -m uvicorn interfaces.api.main:app --host 127.0.0.1 --port 8000 &
 	@sleep 2
-	PYTHONPATH=apps/seo-agent python3 apps/dashboard/server.py &
+	PYTHONPATH=apps/seo-agent:apps/dashboard python3 apps/dashboard/server.py &
 	@sleep 1
 	@echo ""
 	@echo "Dashboard:    http://127.0.0.1:3000"

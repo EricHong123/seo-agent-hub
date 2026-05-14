@@ -166,10 +166,52 @@ body {
   <!-- Tab 3: Publish -->
   <div class="tab-content" id="tab-publish">
     <div class="publish-layout">
-      <div class="publish-header"><h2>选择发布平台</h2></div>
-      <div class="platform-grid" id="platformGrid"></div>
-      <div id="publishCmd" style="margin-top:16px"></div>
-      <button class="btn" onclick="copyPublishCmd()" style="margin-top:16px">复制发布命令</button>
+      <div class="publish-header"><h2>一键分发</h2></div>
+
+      <!-- Step 1: Platform + Account -->
+      <div style="margin-bottom:24px">
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px">选择平台</div>
+        <div class="platform-grid" id="platformGrid"></div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px">账号</div>
+        <select id="publishAccount" style="padding:8px;border:1px solid var(--gray-200);font-size:13px;font-family:var(--font);width:200px">
+          <option value="default">默认账号</option>
+        </select>
+        <button class="btn-text" onclick="loginPlatform()" style="margin-left:8px">扫码登录</button>
+        <span id="loginStatus" style="font-size:11px;color:var(--gray-500);margin-left:8px"></span>
+      </div>
+
+      <!-- Step 2: Upload images -->
+      <div style="margin-bottom:24px">
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px">配图（可选，最多9张）</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap" id="imagePreview"></div>
+        <button class="btn-text" onclick="document.getElementById('imageUpload').click()" style="margin-top:8px">+ 上传图片</button>
+        <input type="file" id="imageUpload" accept="image/*" multiple style="display:none" onchange="handleImageUpload(event)">
+      </div>
+
+      <!-- Step 3: Content preview -->
+      <div style="margin-bottom:24px">
+        <div style="font-size:12px;color:var(--gray-500);margin-bottom:8px">发布内容 <button class="btn-text" onclick="loadPublishPreview()" style="margin-left:8px">刷新</button></div>
+        <div id="publishPreview" style="font-size:13px;padding:16px;border:1px solid var(--gray-200);max-height:200px;overflow-y:auto">
+          点击刷新加载最新 Agent 生成内容
+        </div>
+      </div>
+
+      <!-- Step 4: Publish button -->
+      <button class="btn" onclick="oneClickPublish()" id="publishBtn">一键发布</button>
+      <span id="publishResult" style="font-size:12px;color:var(--gray-500);margin-left:12px"></span>
+
+      <!-- QR Code modal -->
+      <div id="qrModal" style="display:none;position:fixed;inset:0;background:rgba(255,255,255,0.9);z-index:1000;align-items:center;justify-content:center">
+        <div style="text-align:center;background:white;padding:40px;border:1px solid var(--gray-200)">
+          <p style="margin-bottom:16px">用手机扫码登录</p>
+          <img id="qrImage" src="" style="max-width:200px;max-height:200px" alt="QR Code">
+          <p style="margin-top:16px;font-size:12px;color:var(--gray-500)">扫描后等待登录完成...</p>
+          <button class="btn-text" onclick="closeQrModal()" style="margin-top:12px">关闭</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -365,51 +407,119 @@ async function loadContent() {
   }
 }
 
-// Publish
-let selectedPlatforms = [];
+// Publish workflow — one-click
+let selectedPlatform = 'douyin';
+let uploadedImages = [];
+
 function buildPlatformGrid() {
   const platforms = [
     { id: 'douyin', name: '抖音', icon: '🎵' },
-    { id: 'bilibili', name: 'B站', icon: '📺' },
     { id: 'xiaohongshu', name: '小红书', icon: '📕' },
     { id: 'kuaishou', name: '快手', icon: '⚡' },
-    { id: 'tencent', name: '视频号', icon: '💬' },
-    { id: 'baijiahao', name: '百家号', icon: '📝' },
-    { id: 'tiktok', name: 'TikTok', icon: '🌍' },
+    { id: 'bilibili', name: 'B站', icon: '📺' },
   ];
   document.getElementById('platformGrid').innerHTML = platforms.map(p => `
-    <div class="platform-card" id="pf-${p.id}" onclick="togglePlatform('${p.id}')">
+    <div class="platform-card ${p.id === 'douyin' ? 'selected' : ''}" id="pf-${p.id}"
+         onclick="selectPlatform('${p.id}')">
       <div style="font-size:24px">${p.icon}</div>
       <div class="pf-name">${p.name}</div>
     </div>
   `).join('');
 }
 
-function togglePlatform(id) {
-  const idx = selectedPlatforms.indexOf(id);
-  if (idx >= 0) selectedPlatforms.splice(idx, 1);
-  else selectedPlatforms.push(id);
-  document.getElementById(`pf-${id}`).classList.toggle('selected');
-  updatePublishCmd();
+function selectPlatform(id) {
+  selectedPlatform = id;
+  document.querySelectorAll('.platform-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById(`pf-${id}`).classList.add('selected');
 }
 
-function updatePublishCmd() {
-  if (!selectedPlatforms.length) {
-    document.getElementById('publishCmd').innerHTML = '';
-    return;
+async function loginPlatform() {
+  const status = document.getElementById('loginStatus');
+  status.textContent = '生成二维码中...';
+  try {
+    const r = await fetch('/publish/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: selectedPlatform, account: document.getElementById('publishAccount').value }),
+    });
+    const d = await r.json();
+    if (d.status === 'already_logged_in') status.textContent = '已登录 ✓';
+    else if (d.status === 'login_success') status.textContent = '登录成功 ✓';
+    else if (d.status === 'qr_ready') { status.textContent = '请扫码'; showQrModal(); }
+    else status.textContent = (d.message || d.stderr || '失败');
+  } catch(e) { status.textContent = 'SAU 未安装'; }
+}
+
+function showQrModal() {
+  document.getElementById('qrModal').style.display = 'flex';
+  document.getElementById('qrImage').src = `/publish/qr/${selectedPlatform}/default_qrcode.png`;
+  let n = 0;
+  const poll = setInterval(async () => {
+    n++;
+    try {
+      const r = await fetch('/publish/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform: selectedPlatform, account: 'default' }),
+      });
+      const d = await r.json();
+      if (d.status === 'already_logged_in' || d.status === 'login_success') {
+        clearInterval(poll); closeQrModal();
+        document.getElementById('loginStatus').textContent = '登录成功 ✓';
+      }
+    } catch(e) {}
+    if (n > 30) { clearInterval(poll); closeQrModal(); }
+  }, 2000);
+}
+
+function closeQrModal() { document.getElementById('qrModal').style.display = 'none'; }
+
+function handleImageUpload(event) {
+  for (const f of Array.from(event.target.files)) {
+    if (uploadedImages.length >= 9) break;
+    uploadedImages.push(f);
+    const r = new FileReader();
+    r.onload = e => {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:80px;height:80px;object-fit:cover;border:1px solid var(--gray-200)';
+      document.getElementById('imagePreview').appendChild(img);
+    };
+    r.readAsDataURL(f);
   }
-  const lines = selectedPlatforms.map(p =>
-    `sau ${p} upload-video --account YOUR_ACCOUNT --file /path/to/video.mp4 \\\n  --content-url ${SEO_ABS}/api/content/export/latest?format=sau`
-  );
-  document.getElementById('publishCmd').innerHTML = `<div class="cmd-box">${lines.map(l => '<span class="line">$ ' + esc(l) + '</span>').join('')}<br><span style="font-size:11px;color:var(--gray-500)">复制后替换 YOUR_ACCOUNT 和视频路径</span></div>`;
 }
 
-async function copyPublishCmd() {
-  const lines = selectedPlatforms.map(p =>
-    `sau ${p} upload-video --account YOUR_ACCOUNT --file /path/to/video.mp4 --content-url ${SEO_URL}/api/content/export/latest?format=sau`
-  );
-  await navigator.clipboard.writeText(lines.join('\n\n'));
-  alert('已复制到剪贴板');
+async function loadPublishPreview() {
+  try {
+    const r = await fetch('/api/content/export/latest?format=sau');
+    const d = await r.json();
+    document.getElementById('publishPreview').innerHTML = `
+      <strong>${esc(d.title || 'Untitled')}</strong>
+      <div style="color:var(--gray-500);font-size:12px;margin-top:4px">${(d.tags||[]).slice(0,5).join(', ')}</div>
+      <div style="margin-top:8px;font-size:12px">${esc((d.description||'').substring(0,300))}</div>`;
+  } catch(e) {
+    document.getElementById('publishPreview').innerHTML = '暂无内容。先在内容策划中生成文章。';
+  }
+}
+
+async function oneClickPublish() {
+  const btn = document.getElementById('publishBtn');
+  const result = document.getElementById('publishResult');
+  btn.disabled = true; result.textContent = '发布中...';
+  try {
+    const r = await fetch('/publish/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        platform: selectedPlatform,
+        account: document.getElementById('publishAccount').value,
+        content_url: `${SEO_ABS}/api/content/export/latest?format=sau`,
+      }),
+    });
+    const d = await r.json();
+    result.textContent = d.success ? '发布成功 ✓' : (d.error || d.stderr || '失败');
+  } catch(e) { result.textContent = e.message; }
+  btn.disabled = false;
 }
 
 // Files
