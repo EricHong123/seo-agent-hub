@@ -178,7 +178,9 @@ body {
 </main>
 
 <script>
-const SEO_URL = 'http://127.0.0.1:8000';
+// Same-origin proxy — all API calls use relative URLs
+const SEO_URL = '';
+const SEO_ABS = 'http://127.0.0.1:8000';  // For SAU CLI commands (external)
 let isRunning = false;
 
 // Init
@@ -385,7 +387,7 @@ function updatePublishCmd() {
     return;
   }
   const lines = selectedPlatforms.map(p =>
-    `sau ${p} upload-video --account YOUR_ACCOUNT --file /path/to/video.mp4 \\\n  --content-url ${SEO_URL}/api/content/export/latest?format=sau`
+    `sau ${p} upload-video --account YOUR_ACCOUNT --file /path/to/video.mp4 \\\n  --content-url ${SEO_ABS}/api/content/export/latest?format=sau`
   );
   document.getElementById('publishCmd').innerHTML = `<div class="cmd-box">${lines.map(l => '<span class="line">$ ' + esc(l) + '</span>').join('')}<br><span style="font-size:11px;color:var(--gray-500)">复制后替换 YOUR_ACCOUNT 和视频路径</span></div>`;
 }

@@ -4,17 +4,22 @@ start:
 	@echo "Starting ContentEngine..."
 	PYTHONPATH=apps/seo-agent python3 -m uvicorn interfaces.api.main:app --host 127.0.0.1 --port 8000 &
 	@sleep 2
+	PYTHONPATH=apps/seo-agent python3 apps/dashboard/server.py &
+	@sleep 1
+	@echo ""
+	@echo "Dashboard:    http://127.0.0.1:3000"
 	@echo "SEO Agent:    http://127.0.0.1:8000"
-	@echo "Docs:         http://127.0.0.1:8000/docs"
+	@echo "Docs:         http://127.0.0.1:3000/docs"
 
 start-full:
 	@echo "Starting ContentEngine (full)..."
 	docker compose --profile full up -d
+	@echo "Dashboard:    http://127.0.0.1:3000"
 	@echo "SEO Agent:    http://127.0.0.1:8000"
 	@echo "Social Upload: http://127.0.0.1:8001"
-	@echo "Dashboard:    http://127.0.0.1:3000"
 
 stop:
+	pkill -f "dashboard/server.py" || true
 	pkill -f "uvicorn interfaces.api.main" || true
 	docker compose down 2>/dev/null || true
 	@echo "ContentEngine stopped."
