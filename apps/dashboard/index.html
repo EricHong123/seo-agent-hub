@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContentEngine</title>
+<style>
+:root {
+  --white: #ffffff;
+  --black: #1a1a1a;
+  --gray-50: #fafafa;
+  --gray-100: #f5f5f5;
+  --gray-200: #ebebeb;
+  --gray-300: #d6d6d6;
+  --gray-400: #adadad;
+  --gray-500: #858585;
+  --gray-700: #3d3d3d;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'SF Mono', 'Fira Code', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  font-size: 14px; line-height: 1.6;
+  color: var(--black);
+  background: var(--white);
+  height: 100vh; display: flex;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px; min-width: 220px;
+  background: var(--gray-50);
+  border-right: 1px solid var(--gray-200);
+  display: flex; flex-direction: column;
+}
+.sidebar-header {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.sidebar-header h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; }
+.sidebar-header p  { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+.nav-item {
+  padding: 14px 24px; font-size: 13px;
+  cursor: pointer; color: var(--gray-500);
+  border-bottom: 1px solid var(--gray-100);
+  transition: color 0.15s;
+  display: flex; align-items: center; gap: 8px;
+}
+.nav-item:hover, .nav-item.active { color: var(--black); }
+.nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+.status-row {
+  margin-top: auto; padding: 16px 24px;
+  border-top: 1px solid var(--gray-200);
+  font-size: 11px; color: var(--gray-500);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.status-dot.online { background: #4d9375; }
+
+/* Main */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.tab-content { display: none; flex: 1; overflow: hidden; }
+.tab-content.active { display: flex; flex-direction: column; }
+
+/* Tab 1: Agent Chat */
+.chat-container { flex: 1; display: flex; flex-direction: column; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; }
+.chat-msg { max-width: 82%; font-size: 14px; line-height: 1.7; animation: fadeIn 0.2s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.chat-msg.user { align-self: flex-end; background: var(--gray-100); padding: 14px 20px; }
+.chat-msg.agent { align-self: flex-start; }
+.chat-msg.agent h2 { font-size: 16px; margin: 12px 0 6px; }
+.chat-msg.agent h3 { font-size: 14px; margin: 10px 0 4px; }
+.chat-msg.agent table { border-collapse: collapse; margin: 8px 0; font-size: 12px; width: 100%; }
+.chat-msg.agent th { text-align: left; padding: 6px 0; border-bottom: 2px solid var(--gray-200); font-size: 10px; text-transform: uppercase; color: var(--gray-500); }
+.chat-msg.agent td { padding: 6px 0; border-bottom: 1px solid var(--gray-100); }
+.chat-msg.agent pre { background: var(--gray-50); padding: 14px 18px; margin: 8px 0; font-family: var(--mono); font-size: 12px; overflow-x: auto; }
+.tool-badge { font-size: 10px; color: var(--gray-500); margin-right: 6px; }
+.empty-state { text-align: center; color: var(--gray-400); padding: 80px 20px; }
+.chat-input-area { padding: 24px 40px 28px; border-top: 1px solid var(--gray-200); display: flex; gap: 12px; }
+.chat-input { flex: 1; padding: 12px 0; border: none; border-bottom: 1px solid var(--gray-200); font-size: 14px; font-family: var(--font); outline: none; background: transparent; resize: none; }
+.chat-input:focus { border-bottom-color: var(--black); }
+.chat-input::placeholder { color: var(--gray-400); }
+.btn { padding: 12px 24px; background: var(--black); color: var(--white); border: none; font-size: 13px; font-family: var(--font); cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--gray-700); }
+.btn:disabled { background: var(--gray-300); cursor: not-allowed; }
+.btn-text { font-size: 11px; background: none; border: none; color: var(--gray-500); cursor: pointer; font-family: var(--font); }
+
+/* Tab 2: Content */
+.content-list { padding: 32px 40px; overflow-y: auto; flex: 1; }
+.content-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.content-header h2 { font-size: 16px; font-weight: 600; }
+.card { border: 1px solid var(--gray-200); padding: 20px 24px; margin-bottom: 12px; }
+.card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.card .meta { font-size: 11px; color: var(--gray-500); margin-bottom: 8px; }
+.card .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.card .tag { font-size: 10px; padding: 2px 6px; background: var(--gray-100); }
+.card .actions { display: flex; gap: 8px; margin-top: 12px; }
+
+/* Tab 3: Publish */
+.publish-layout { padding: 32px 40px; overflow-y: auto; flex: 1; }
+.publish-header { margin-bottom: 24px; }
+.publish-header h2 { font-size: 16px; font-weight: 600; }
+.platform-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.platform-card { border: 1px solid var(--gray-200); padding: 16px; cursor: pointer; transition: border-color 0.15s; text-align: center; }
+.platform-card:hover { border-color: var(--black); }
+.platform-card.selected { border-color: var(--black); background: var(--gray-50); }
+.platform-card .pf-name { font-size: 13px; font-weight: 600; }
+.platform-card .pf-status { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+.cmd-box { background: var(--gray-50); border: 1px solid var(--gray-200); padding: 16px 20px; font-family: var(--mono); font-size: 12px; margin-top: 16px; }
+.cmd-box .line { display: block; margin: 2px 0; }
+
+/* Tab 4: Files */
+.file-list { padding: 32px 40px; overflow-y: auto; flex: 1; }
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <h1>ContentEngine</h1>
+    <p>AI 内容生产 + 多平台分发</p>
+  </div>
+  <div class="nav-item active" onclick="switchTab('chat')"><span class="icon">💬</span> 内容策划</div>
+  <div class="nav-item" onclick="switchTab('content')"><span class="icon">📄</span> 内容管理</div>
+  <div class="nav-item" onclick="switchTab('publish')"><span class="icon">📤</span> 分发管理</div>
+  <div class="nav-item" onclick="switchTab('files')"><span class="icon">📁</span> 生成文件</div>
+  <div class="status-row">
+    <div><span class="status-dot" id="seoDot"></span>SEO Agent: <span id="seoStatus">检查中</span></div>
+    <div><span class="status-dot" id="sauDot"></span>SAU: <span id="sauStatus">未运行</span></div>
+  </div>
+</aside>
+
+<main class="main">
+  <!-- Tab 1: Chat -->
+  <div class="tab-content active" id="tab-chat">
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="empty-state">
+          <p style="font-size:18px">ContentEngine 已就绪</p>
+          <p style="font-size:13px;margin-top:8px">输入 SEO 任务开始内容策划，完成后可在分发管理一键发布</p>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="chatInput" placeholder="描述你的 SEO 任务..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+        <button class="btn" id="sendBtn" onclick="sendMessage()">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Content -->
+  <div class="tab-content" id="tab-content">
+    <div class="content-list" id="contentList">
+      <div class="content-header"><h2>最新内容</h2><button class="btn-text" onclick="loadContent()">刷新</button></div>
+      <div id="contentItems"><div class="empty-state"><p>暂无内容。先在内容策划中生成文章。</p></div></div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Publish -->
+  <div class="tab-content" id="tab-publish">
+    <div class="publish-layout">
+      <div class="publish-header"><h2>选择发布平台</h2></div>
+      <div class="platform-grid" id="platformGrid"></div>
+      <div id="publishCmd" style="margin-top:16px"></div>
+      <button class="btn" onclick="copyPublishCmd()" style="margin-top:16px">复制发布命令</button>
+    </div>
+  </div>
+
+  <!-- Tab 4: Files -->
+  <div class="tab-content" id="tab-files">
+    <div class="file-list" id="fileListTab">
+      <div class="content-header"><h2>生成文件</h2><button class="btn-text" onclick="loadFiles()">刷新</button></div>
+      <div id="fileItems"><div class="empty-state"><p>暂无文件</p></div></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const SEO_URL = 'http://127.0.0.1:8000';
+let isRunning = false;
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  checkHealth();
+  loadContent();
+  buildPlatformGrid();
+  loadFiles();
+  setInterval(checkHealth, 30000);
+});
+
+async function checkHealth() {
+  try {
+    const r = await fetch(`${SEO_URL}/health`);
+    const d = await r.json();
+    document.getElementById('seoDot').className = 'status-dot online';
+    document.getElementById('seoStatus').textContent = `v${d.version} (${d.checks?.database ? '✓' : '✗'})`;
+  } catch(e) {
+    document.getElementById('seoDot').className = 'status-dot';
+    document.getElementById('seoStatus').textContent = '离线';
+  }
+  try {
+    await fetch('http://127.0.0.1:8001/health', { signal: AbortSignal.timeout(2000) });
+    document.getElementById('sauDot').className = 'status-dot online';
+    document.getElementById('sauStatus').textContent = '在线';
+  } catch(e) {
+    document.getElementById('sauDot').className = 'status-dot';
+    document.getElementById('sauStatus').textContent = '未运行';
+  }
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+  if (name === 'content') loadContent();
+  if (name === 'files') loadFiles();
+}
+
+// Chat
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const task = input.value.trim();
+  if (!task || isRunning) return;
+  input.value = ''; isRunning = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  const empty = document.querySelector('#chatMessages .empty-state');
+  if (empty) empty.remove();
+
+  addMsg('user', task);
+  const tid = addThinking();
+
+  try {
+    const r = await fetch(`${SEO_URL}/api/agent/run`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task, project_id: 'default' }),
+    });
+    const reader = r.body.getReader();
+    const dec = new TextDecoder(); let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const d = line.slice(6);
+        if (d === '[DONE]') continue;
+        try {
+          const m = JSON.parse(d);
+          if (m.type === 'thinking') { removeThinking(tid); addMsg('agent', `<span class="tool-badge">${(m.tools||[]).join(', ')}</span> ${esc(m.content||'')}`); }
+          if (m.type === 'tool_result') { addMsg('agent', `<span class="tool-badge">${m.tool}</span> <span style="color:var(--gray-500);font-size:12px">${esc((m.result||'').substring(0, 150))}</span>`); }
+          if (m.type === 'done') { removeThinking(tid); addMsg('agent', m.content); }
+          if (m.type === 'error') { removeThinking(tid); addMsg('agent', `<span style="color:#cc3333">${esc(m.content)}</span>`); }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {
+    removeThinking(tid);
+    addMsg('agent', `<span style="color:#cc3333">请求失败: ${esc(e.message)}</span>`);
+  }
+  isRunning = false;
+  document.getElementById('sendBtn').disabled = false;
+  setTimeout(loadContent, 1000);
+}
+
+function addMsg(role, content) {
+  const c = document.getElementById('chatMessages');
+  const d = document.createElement('div');
+  d.className = `chat-msg ${role}`;
+  d.innerHTML = role === 'agent' ? md(content) : esc(content);
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+}
+
+function addThinking() {
+  const c = document.getElementById('chatMessages');
+  const d = document.createElement('div'); d.className = 'chat-msg agent';
+  d.id = 't-' + Date.now(); d.innerHTML = '<span style="color:var(--gray-400);font-style:italic">思考中...</span>';
+  c.appendChild(d); c.scrollTop = c.scrollHeight;
+  return d.id;
+}
+
+function removeThinking(id) { const e = document.getElementById(id); if (e) e.remove(); }
+function esc(t) { const d = document.createElement('div'); d.textContent = t || ''; return d.innerHTML; }
+function md(t) {
+  if (!t) return '';
+  let h = esc(t);
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/`([^`\n]+)`/g, '<code style="background:var(--gray-50);padding:1px 4px">$1</code>');
+  h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  h = h.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  h = h.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+  // Tables
+  let lines = h.split('\n'), inT = false, tH = '', out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith('|') && line.endsWith('|')) {
+      const cells = line.split('|').filter(c => c.trim());
+      if (/^[\s\-:]+$/.test(cells.join(''))) continue;
+      if (!inT) { inT = true; tH = '<table>'; }
+      const tag = i + 1 < lines.length && /^\|[\s\-:]+\|$/.test(lines[i+1]) ? 'th' : 'td';
+      tH += '<tr>' + cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('') + '</tr>';
+    } else {
+      if (inT) { tH += '</table>'; out.push(tH); tH = ''; inT = false; }
+      out.push(line);
+    }
+  }
+  if (inT) { tH += '</table>'; out.push(tH); }
+  h = out.join('\n');
+  h = h.replace(/\n\n+/g, '<br><br>'); h = h.replace(/\n/g, '<br>');
+  return h;
+}
+
+// Content management
+async function loadContent() {
+  try {
+    const r = await fetch(`${SEO_URL}/api/content/export/list`);
+    const d = await r.json();
+    const container = document.getElementById('contentItems');
+    if (!d.latest) {
+      container.innerHTML = '<div class="empty-state"><p>暂无内容。先在内容策划中生成文章。</p></div>';
+      return;
+    }
+    // Also fetch articles
+    let articles = [];
+    try { const ar = await fetch(`${SEO_URL}/articles`); articles = (await ar.json()) || []; } catch(e) {}
+
+    let html = '';
+    if (d.latest) {
+      html += `<div class="card">
+        <h3>最新导出</h3>
+        <div class="meta">${d.latest}</div>
+        <div class="actions">
+          <a href="${SEO_URL}/api/content/export/latest/file" download class="btn-text">下载 MD</a>
+        </div>
+      </div>`;
+    }
+    for (const a of articles.slice(0, 5)) {
+      html += `<div class="card">
+        <h3>${esc(a.title || 'Untitled')}</h3>
+        <div class="meta">关键词: ${esc(a.primary_keyword || '-')} · ${a.word_count || 0} 字 · ${esc(a.status || 'draft')}</div>
+      </div>`;
+    }
+    container.innerHTML = html || '<div class="empty-state"><p>暂无内容</p></div>';
+  } catch(e) {
+    document.getElementById('contentItems').innerHTML = `<div class="empty-state"><p>SEO Agent 未运行</p></div>`;
+  }
+}
+
+// Publish
+let selectedPlatforms = [];
+function buildPlatformGrid() {
+  const platforms = [
+    { id: 'douyin', name: '抖音', icon: '🎵' },
+    { id: 'bilibili', name: 'B站', icon: '📺' },
+    { id: 'xiaohongshu', name: '小红书', icon: '📕' },
+    { id: 'kuaishou', name: '快手', icon: '⚡' },
+    { id: 'tencent', name: '视频号', icon: '💬' },
+    { id: 'baijiahao', name: '百家号', icon: '📝' },
+    { id: 'tiktok', name: 'TikTok', icon: '🌍' },
+  ];
+  document.getElementById('platformGrid').innerHTML = platforms.map(p => `
+    <div class="platform-card" id="pf-${p.id}" onclick="togglePlatform('${p.id}')">
+      <div style="font-size:24px">${p.icon}</div>
+      <div class="pf-name">${p.name}</div>
+    </div>
+  `).join('');
+}
+
+function togglePlatform(id) {
+  const idx = selectedPlatforms.indexOf(id);
+  if (idx >= 0) selectedPlatforms.splice(idx, 1);
+  else selectedPlatforms.push(id);
+  document.getElementById(`pf-${id}`).classList.toggle('selected');
+  updatePublishCmd();
+}
+
+function updatePublishCmd() {
+  if (!selectedPlatforms.length) {
+    document.getElementById('publishCmd').innerHTML = '';
+    return;
+  }
+  const lines = selectedPlatforms.map(p =>
+    `sau ${p} upload-video --account YOUR_ACCOUNT --file /path/to/video.mp4 \\\n  --content-url ${SEO_URL}/api/content/export/latest?format=sau`
+  );
+  document.getElementById('publishCmd').innerHTML = `<div class="cmd-box">${lines.map(l => '<span class="line">$ ' + esc(l) + '</span>').join('')}<br><span style="font-size:11px;color:var(--gray-500)">复制后替换 YOUR_ACCOUNT 和视频路径</span></div>`;
+}
+
+async function copyPublishCmd() {
+  const lines = selectedPlatforms.map(p =>
+    `sau ${p} upload-video --account YOUR_ACCOUNT --file /path/to/video.mp4 --content-url ${SEO_URL}/api/content/export/latest?format=sau`
+  );
+  await navigator.clipboard.writeText(lines.join('\n\n'));
+  alert('已复制到剪贴板');
+}
+
+// Files
+async function loadFiles() {
+  try {
+    const r = await fetch(`${SEO_URL}/api/skills/files`);
+    const d = await r.json();
+    const files = d.files || [];
+    const c = document.getElementById('fileItems');
+    if (!files.length) { c.innerHTML = '<div class="empty-state"><p>暂无文件</p></div>'; return; }
+    c.innerHTML = files.map(f => `
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <strong>${esc(f.name)}</strong>
+          <div class="meta">${f.size_formatted} · ${f.ext}</div>
+        </div>
+        <a href="${SEO_URL}/api/skills/files/${encodeURIComponent(f.name)}" download class="btn-text">下载</a>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('fileItems').innerHTML = '<div class="empty-state"><p>加载失败</p></div>';
+  }
+}
+</script>
+</body>
+</html>
