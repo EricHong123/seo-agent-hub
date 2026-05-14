@@ -134,7 +134,7 @@ body {
   <div class="nav-item" onclick="switchTab('agent')"><span class="icon">🔧</span> SEO 工作台</div>
   <div class="status-row">
     <div><span class="status-dot" id="seoDot"></span>SEO Agent: <span id="seoStatus">检查中</span></div>
-    <div><span class="status-dot" id="sauDot"></span>SAU: <span id="sauStatus">未运行</span></div>
+    <div><span class="status-dot" id="sauDot"></span>Social Upload: <span id="sauStatus">检查中</span></div>
   </div>
 </aside>
 
@@ -165,23 +165,8 @@ body {
 
   <!-- Tab 3: Social Upload -->
   <div class="tab-content" id="tab-publish">
-    <div class="publish-layout">
-      <div class="publish-header"><h2>Social Auto Upload</h2></div>
-      <p style="font-size:13px;color:var(--gray-500);margin-bottom:24px">
-        Social Auto Upload 是独立的多平台分发工具，支持抖音/B站/小红书/快手/视频号/百家号/TikTok。
-      </p>
-      <div class="platform-grid" id="platformGrid"></div>
-      <div style="margin-top:24px;padding:20px;background:var(--gray-50);border:1px solid var(--gray-200)">
-        <strong style="font-size:13px">快速开始</strong>
-        <div class="cmd-box" style="margin-top:12px">
-          <span class="line">$ pip install -r apps/social-upload/requirements.txt</span>
-          <span class="line">$ sau douyin login --account myaccount</span>
-          <span class="line">$ sau douyin upload-video --account myaccount --file video.mp4 --title "标题" --desc "描述" --tags tag1,tag2</span>
-        </div>
-        <p style="font-size:11px;color:var(--gray-500);margin-top:12px">
-          详情参见 <a href="https://github.com/dreammis/social-auto-upload" style="color:var(--black)">dreammis/social-auto-upload</a> (11K stars)
-        </p>
-      </div>
+    <div class="iframe-container">
+      <iframe src="http://127.0.0.1:8001" loading="lazy"></iframe>
     </div>
   </div>
 
@@ -204,14 +189,12 @@ body {
 <script>
 // Same-origin proxy — all API calls use relative URLs
 const SEO_URL = '';
-const SEO_ABS = 'http://127.0.0.1:8000';  // For SAU CLI commands (external)
 let isRunning = false;
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   checkHealth();
   loadContent();
-  buildPlatformGrid();
   loadFiles();
   setInterval(checkHealth, 30000);
 });
@@ -227,7 +210,7 @@ async function checkHealth() {
     document.getElementById('seoStatus').textContent = '离线';
   }
   try {
-    await fetch('http://127.0.0.1:8001/health', { signal: AbortSignal.timeout(2000) });
+    await fetch('http://127.0.0.1:8001/api/status', { signal: AbortSignal.timeout(2000) });
     document.getElementById('sauDot').className = 'status-dot online';
     document.getElementById('sauStatus').textContent = '在线';
   } catch(e) {
@@ -377,24 +360,6 @@ async function loadContent() {
   }
 }
 
-// Social Upload — standalone tool reference
-function buildPlatformGrid() {
-  const platforms = [
-    { id: 'douyin', name: '抖音', icon: '🎵' },
-    { id: 'bilibili', name: 'B站', icon: '📺' },
-    { id: 'xiaohongshu', name: '小红书', icon: '📕' },
-    { id: 'kuaishou', name: '快手', icon: '⚡' },
-    { id: 'tencent', name: '视频号', icon: '💬' },
-    { id: 'baijiahao', name: '百家号', icon: '📝' },
-    { id: 'tiktok', name: 'TikTok', icon: '🌍' },
-  ];
-  document.getElementById('platformGrid').innerHTML = platforms.map(p => `
-    <div class="platform-card">
-      <div style="font-size:24px">${p.icon}</div>
-      <div class="pf-name">${p.name}</div>
-    </div>
-  `).join('');
-}
 
 // Files
 async function loadFiles() {
