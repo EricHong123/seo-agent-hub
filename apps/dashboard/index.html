@@ -149,7 +149,7 @@ body {
         </div>
       </div>
       <div class="chat-input-area">
-        <textarea class="chat-input" id="chatInput" placeholder="描述你的 SEO 任务..." rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+        <textarea class="chat-input" id="chatInput" placeholder="描述你的 SEO 任务...（连按两次 Enter 发送）" rows="1" onkeydown="handleChatEnter(event)"></textarea>
         <button class="btn" id="sendBtn" onclick="sendMessage()">发送</button>
       </div>
     </div>
@@ -229,6 +229,15 @@ function switchTab(name) {
 }
 
 // Chat
+let lastChatEnter = 0;
+function handleChatEnter(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastChatEnter < 500) { sendMessage(); lastChatEnter = 0; return; }
+    lastChatEnter = now;
+  }
+}
 async function sendMessage() {
   const input = document.getElementById('chatInput');
   const task = input.value.trim();
