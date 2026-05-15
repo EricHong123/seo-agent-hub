@@ -1,6 +1,6 @@
-# ContentEngine
+# SEO Agent Hub
 
-AI 内容生产 + 多平台分发一体化系统。
+SEO Agent + 内容分发系统 — AI 内容生产与多平台分发一体化平台。
 
 ```
 研究关键词 → AI 写作 → SEO 优化 → 多格式导出 → 一键分发到抖音/B站/小红书/快手...
@@ -9,7 +9,7 @@ AI 内容生产 + 多平台分发一体化系统。
 ## 架构
 
 ```
-content-engine/
+seo-agent-hub/
 ├── apps/
 │   ├── seo-agent/          # AI 内容引擎 (git submodule)
 │   ├── social-upload/      # 多平台分发引擎 (git submodule)
@@ -31,8 +31,8 @@ content-engine/
 
 ```bash
 # 1. 克隆（含子模块）
-git clone --recurse-submodules https://github.com/EricHong123/content-engine.git
-cd content-engine
+git clone --recurse-submodules https://github.com/EricHong123/seo-agent-hub.git
+cd seo-agent-hub
 
 # 2. 安装依赖
 make install

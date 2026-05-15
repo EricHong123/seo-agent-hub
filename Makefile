@@ -1,7 +1,7 @@
 .PHONY: start stop reset logs status install docker-build docker-up docker-down
 
 start:
-	@echo "Starting ContentEngine..."
+	@echo "Starting SEO Agent Hub..."
 	PYTHONPATH=apps/seo-agent python3 -m uvicorn interfaces.api.main:app --host 127.0.0.1 --port 8000 &
 	@sleep 2
 	PYTHONPATH=apps/seo-agent:apps/dashboard python3 apps/dashboard/server.py &
@@ -17,10 +17,10 @@ stop:
 	pkill -f "dashboard/server.py" || true
 	pkill -f "web_server.py" || true
 	pkill -f "uvicorn interfaces.api.main" || true
-	@echo "ContentEngine stopped."
+	@echo "SEO Agent Hub stopped."
 
 start-full:
-	@echo "Starting ContentEngine (full)..."
+	@echo "Starting SEO Agent Hub (full)..."
 	docker compose --profile full up -d
 	@echo "Dashboard:    http://127.0.0.1:3000"
 	@echo "SEO Agent:    http://127.0.0.1:8000"
@@ -50,14 +50,14 @@ docker-build:
 	@echo "Done. Run 'make docker-up' to start."
 
 docker-up:
-	@echo "Starting ContentEngine (Docker)..."
+	@echo "Starting SEO Agent Hub (Docker)..."
 	docker compose up -d
 	@echo ""
 	@echo "Dashboard: http://localhost:3000"
 	@echo "SEO Agent: http://localhost:8000"
 
 docker-up-full:
-	@echo "Starting ContentEngine full stack (Docker)..."
+	@echo "Starting SEO Agent Hub full stack (Docker)..."
 	docker compose --profile full up -d
 	@echo "Dashboard:    http://localhost:3000"
 	@echo "SEO Agent:    http://localhost:8000"
@@ -65,4 +65,4 @@ docker-up-full:
 
 docker-down:
 	docker compose down
-	@echo "ContentEngine stopped."
+	@echo "SEO Agent Hub stopped."

@@ -1,4 +1,4 @@
-"""ContentEngine Dashboard — static file server + API proxy.
+"""SEO Agent Hub Dashboard — static file server + API proxy.
 
 Serves the dashboard on port 3000 and proxies all API calls to seo-agent (port 8000).
 Eliminates CORS issues — dashboard and API share the same origin.
@@ -88,6 +88,6 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print(f"ContentEngine Dashboard → http://127.0.0.1:{PORT}")
+    print(f"SEO Agent Hub Dashboard → http://127.0.0.1:{PORT}")
     print(f"API proxy → {SEO_AGENT}")
     http.server.HTTPServer(("127.0.0.1", PORT), ProxyHandler).serve_forever()
