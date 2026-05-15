@@ -9,6 +9,9 @@ services:
       - "8000:8000"
     env_file:
       - ./apps/seo-agent/.env
+    environment:
+      - DB_URL=sqlite+aiosqlite:///app/data/memory.db
+      - CHROMA_PERSIST_DIR=/app/data/chroma
     volumes:
       - seo_data:/app/data
     restart: unless-stopped
@@ -16,21 +19,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
+      start-period: 15s
       retries: 3
-
-  social-upload:
-    build:
-      context: ./apps/social-upload
-      dockerfile: Dockerfile
-    container_name: social-upload
-    ports:
-      - "8001:8001"
-    volumes:
-      - sau_data:/app/data
-      - ./apps/social-upload/cookies:/app/cookies
-    restart: unless-stopped
-    profiles:
-      - full
 
   dashboard:
     build:
@@ -38,10 +28,31 @@ services:
     container_name: dashboard
     ports:
       - "3000:3000"
+    environment:
+      - SEO_AGENT_URL=http://seo-agent:8000
+    depends_on:
+      seo-agent:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Optional: SAU requires Chrome + display, use only on machines with GUI
+  sau-web:
+    build:
+      context: ./apps/social-upload
+      dockerfile: Dockerfile.web
+    container_name: sau-web
+    ports:
+      - "8001:8001"
+    volumes:
+      - sau_cookies:/app/cookies
+      - sau_uploads:/app/uploads
     depends_on:
       - seo-agent
     restart: unless-stopped
+    profiles:
+      - full
 
 volumes:
   seo_data:
-  sau_data:
+  sau_cookies:
+  sau_uploads:

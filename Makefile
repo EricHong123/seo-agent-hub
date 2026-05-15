@@ -1,4 +1,4 @@
-.PHONY: start stop reset logs status install
+.PHONY: start stop reset logs status install docker-build docker-up docker-down
 
 start:
 	@echo "Starting ContentEngine..."
@@ -43,3 +43,26 @@ install:
 	cd apps/seo-agent && pip install -r requirements.txt
 	cd apps/social-upload && pip install -r requirements.txt
 	@echo "Done. Run 'make start' to begin."
+
+docker-build:
+	@echo "Building Docker images..."
+	docker compose build
+	@echo "Done. Run 'make docker-up' to start."
+
+docker-up:
+	@echo "Starting ContentEngine (Docker)..."
+	docker compose up -d
+	@echo ""
+	@echo "Dashboard: http://localhost:3000"
+	@echo "SEO Agent: http://localhost:8000"
+
+docker-up-full:
+	@echo "Starting ContentEngine full stack (Docker)..."
+	docker compose --profile full up -d
+	@echo "Dashboard:    http://localhost:3000"
+	@echo "SEO Agent:    http://localhost:8000"
+	@echo "SAU Web:      http://localhost:8001"
+
+docker-down:
+	docker compose down
+	@echo "ContentEngine stopped."
