@@ -261,8 +261,6 @@ async function sendMessage() {
         if (d === '[DONE]') continue;
         try {
           const m = JSON.parse(d);
-          if (m.type === 'thinking') { removeThinking(tid); addMsg('agent', `<span class="tool-badge">${(m.tools||[]).join(', ')}</span> ${esc(m.content||'')}`); }
-          if (m.type === 'tool_result') { addMsg('agent', `<span class="tool-badge">${m.tool}</span> <span style="color:var(--gray-500);font-size:12px">${esc((m.result||'').substring(0, 150))}</span>`); }
           if (m.type === 'done') { removeThinking(tid); addMsg('agent', m.content); }
           if (m.type === 'error') { removeThinking(tid); addMsg('agent', `<span style="color:#cc3333">${esc(m.content)}</span>`); }
         } catch(e) {}
